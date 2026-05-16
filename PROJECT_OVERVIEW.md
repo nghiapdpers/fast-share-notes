@@ -51,5 +51,10 @@
 ## 8. Changelog (newest first)
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-05-17 | Centered countdown badge and improved layout alignment on view screen | Antigravity |
+| 2026-05-17 | Added real-time countdown timer for shared and viewed notes | Antigravity |
+| 2026-05-17 | Refactored UI: removed inline styles, added utility classes for maintenance | Antigravity |
+| 2026-05-17 | Reduced overall font sizes and adjusted mobile layout for better density | Antigravity |
+| 2026-05-17 | Improved mobile responsiveness (padding, font sizes, media queries) | Antigravity |
 | 2026-05-16 | Updated stack to React & E2EE, set expiration to 5m | Antigravity |
 | 2026-05-16 | Initial overview created | Antigravity |

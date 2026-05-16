@@ -27,11 +27,37 @@ const generateSecureId = (length) => {
   return result;
 };
 
+const CountdownTimer = ({ expiresAt, onExpire }) => {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    const calculateTime = () => {
+      const difference = new Date(expiresAt) - new Date();
+      if (difference <= 0) {
+        setTimeLeft('Đã hết hạn');
+        onExpire && onExpire();
+        return;
+      }
+
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+      setTimeLeft(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
+    };
+
+    calculateTime();
+    const timer = setInterval(calculateTime, 1000);
+    return () => clearInterval(timer);
+  }, [expiresAt, onExpire]);
+
+  return <span>{timeLeft}</span>;
+};
+
 function App() {
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [viewNote, setViewNote] = useState(null);
+  const [expiresAt, setExpiresAt] = useState(null);
   const [copySuccess, setCopySuccess] = useState(null);
   const [error, setError] = useState(null);
   const [accessCode, setAccessCode] = useState('');
@@ -81,6 +107,7 @@ function App() {
       if (!originalText) throw new Error('Khóa giải mã không chính xác.');
 
       setViewNote(originalText);
+      setExpiresAt(data.expires_at);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -125,8 +152,10 @@ function App() {
       
       setResult({
         code: combinedCode,
-        url: shareUrl
+        url: shareUrl,
+        expires_at: expiresAt
       });
+      setExpiresAt(expiresAt);
       setContent('');
     } catch (err) {
       console.error(err);
@@ -158,16 +187,21 @@ function App() {
   if (viewNote) {
     return (
       <div className="glass-card">
-        <h1 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+        <h1 className="flex-center gap-sm">
           <ShieldAlert className="text-primary" /> Ghi chú an toàn
         </h1>
+        <div className="badge mb-md flex-center gap-xs mx-auto w-fit">
+          <Clock size={14} /> Hết hạn sau: <CountdownTimer expiresAt={expiresAt} onExpire={() => {
+            setViewNote(null);
+            setError('Ghi chú này đã hết hạn tự động.');
+          }} />
+        </div>
         <p className="subtitle">Nội dung đã được giải mã thành công.</p>
         
-        <div style={{ position: 'relative' }}>
-          <textarea readOnly value={viewNote} style={{ border: '1px solid var(--primary)' }} />
+        <div className="relative">
+          <textarea readOnly value={viewNote} className="border-primary" />
           <button 
-            className="copy-btn" 
-            style={{ position: 'absolute', top: '10px', right: '10px' }}
+            className="copy-btn absolute-top-right" 
             onClick={() => copyToClipboard(viewNote, 'note')}
           >
             {copySuccess === 'note' ? <Check size={18} /> : <Copy size={18} />}
@@ -187,27 +221,33 @@ function App() {
       <p className="subtitle">Mã hóa AES-256, tự hủy sau 5 phút.</p>
 
       {!supabase && (
-        <div style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', padding: '1.5rem', borderRadius: '16px', marginBottom: '1.5rem', textAlign: 'left', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-          <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}><Clock size={18} /> Cấu hình chưa hoàn tất</h3>
-          <p style={{ fontSize: '0.9rem', lineHeight: '1.5', opacity: 0.8 }}>
+        <div className="alert-warning">
+          <h3 className="flex-center gap-sm mb-xs"><Clock size={18} /> Cấu hình chưa hoàn tất</h3>
+          <p className="text-sm opacity-80">
             Bạn cần tạo file <strong>.env</strong> và điền thông tin Supabase để ứng dụng hoạt động.
           </p>
         </div>
       )}
 
       {error && (
-        <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', padding: '1rem', borderRadius: '16px', marginBottom: '1.5rem', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+        <div className="alert-error">
           {error}
         </div>
       )}
 
       {!result ? (
         <>
-          <div className="tab-container" style={{ display: 'flex', gap: '10px', marginBottom: '1.5rem' }}>
-            <button className="btn" style={{ background: isAccessing ? 'transparent' : 'rgba(16, 185, 129, 0.1)', flex: 1, color: isAccessing ? 'var(--text-secondary)' : 'var(--primary)' }} onClick={() => setIsAccessing(false)}>
+          <div className="tab-container">
+            <button 
+              className={`btn ${!isAccessing ? 'tab-active' : 'tab-inactive'}`}
+              onClick={() => setIsAccessing(false)}
+            >
               <Share2 size={18} /> Tạo Note
             </button>
-            <button className="btn" style={{ background: !isAccessing ? 'transparent' : 'rgba(16, 185, 129, 0.1)', flex: 1, color: !isAccessing ? 'var(--text-secondary)' : 'var(--primary)' }} onClick={() => setIsAccessing(true)}>
+            <button 
+              className={`btn ${isAccessing ? 'tab-active' : 'tab-inactive'}`}
+              onClick={() => setIsAccessing(true)}
+            >
               <Key size={18} /> Nhập Mã
             </button>
           </div>
@@ -220,9 +260,9 @@ function App() {
                 onChange={(e) => setContent(e.target.value)}
                 disabled={isLoading}
               />
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              <div className="textarea-footer">
                 <span>Độ dài: {content.length} / 100,000</span>
-                {content.length > 90000 && <span style={{ color: '#f87171' }}>Sắp đạt giới hạn!</span>}
+                {content.length > 90000 && <span className="text-danger">Sắp đạt giới hạn!</span>}
               </div>
               <button 
                 className="btn btn-primary" 
@@ -234,27 +274,17 @@ function App() {
               </button>
             </>
           ) : (
-            <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-              <div style={{ position: 'relative' }}>
+            <div className="fade-in">
+              <div className="relative">
                 <input 
                   type="text" 
+                  className="access-input"
                   placeholder="Nhập mã (VD: A1B2C3-XXXX)" 
                   value={accessCode}
                   onChange={(e) => setAccessCode(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '1.5rem',
-                    background: 'rgba(0,0,0,0.2)',
-                    border: '1px solid var(--glass-border)',
-                    borderRadius: '16px',
-                    color: 'white',
-                    fontSize: '1.1rem',
-                    outline: 'none',
-                    marginBottom: '1.5rem'
-                  }}
                   onKeyPress={(e) => e.key === 'Enter' && handleAccessByCode()}
                 />
-                <Search style={{ position: 'absolute', right: '1.5rem', top: '1.5rem', color: 'var(--text-secondary)' }} size={20} />
+                <Search className="search-icon" size={20} />
               </div>
               <button 
                 className="btn btn-primary" 
@@ -268,14 +298,17 @@ function App() {
           )}
         </>
       ) : (
-        <div className="results-area" style={{ paddingTop: '1rem' }}>
-          <div className="badge" style={{ marginBottom: '1rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-            <Clock size={14} /> Tự hủy sau 5 phút
+        <div className="results-area">
+          <div className="badge mb-md flex-center gap-xs">
+            <Clock size={14} /> Hết hạn sau: <CountdownTimer expiresAt={result.expires_at} onExpire={() => {
+              setResult(null);
+              setError('Ghi chú vừa tạo đã hết hạn.');
+            }} />
           </div>
 
           <div className="result-label">Mã truy cập an toàn</div>
           <div className="result-item">
-            <span className="result-value" style={{ letterSpacing: '1px' }}>{result.code}</span>
+            <span className="result-value letter-spacing-1">{result.code}</span>
             <button className="copy-btn" onClick={() => copyToClipboard(result.code, 'code')}>
               {copySuccess === 'code' ? <Check size={18} /> : <Copy size={18} />}
             </button>
@@ -283,7 +316,7 @@ function App() {
 
           <div className="result-label">Link giải mã tự động</div>
           <div className="result-item">
-            <span className="result-value" style={{ fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>
+            <span className="result-value text-ellipsis">
               {result.url}
             </span>
             <button className="copy-btn" onClick={() => copyToClipboard(result.url, 'url')}>
@@ -299,8 +332,7 @@ function App() {
           </div>
 
           <button 
-            className="btn" 
-            style={{ marginTop: '1rem', background: 'rgba(16, 185, 129, 0.05)', color: 'var(--text-secondary)' }}
+            className="btn btn-secondary mt-md" 
             onClick={() => setResult(null)}
           >
             <RefreshCw size={20} /> Tạo ghi chú khác
