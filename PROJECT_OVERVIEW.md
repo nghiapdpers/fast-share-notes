@@ -5,6 +5,7 @@
 
 **Last Updated:** 2026-05-16
 **Tech Stack:** React (Vite), CSS Vanilla, Supabase, Crypto-JS
+**License:** MIT
 
 ---
 
@@ -30,11 +31,11 @@
 - `/public`: Các asset tĩnh.
 
 ## 4. Key Features & Status
-- [ ] Create Note (Markdown support) - Planned
-- [ ] E2EE (AES-256) - Planned
-- [ ] Generate Short ID (6 chars) & QR Code - Planned
-- [ ] Auto-expire (5 minutes) - Planned
-- [ ] View note with auto-decryption - Planned
+- [x] Create Note (Markdown support) - Done
+- [x] E2EE (AES-256) - Done
+- [x] Generate Short ID (6 chars) & QR Code - Done
+- [x] Auto-expire (5 minutes) - Done
+- [x] View note with auto-decryption - Done
 
 ## 5. Established Patterns & Conventions
 - **UI/UX:** Premium Aesthetics, Dark Mode, Micro-animations, Glassmorphism.
